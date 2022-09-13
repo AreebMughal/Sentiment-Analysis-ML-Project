@@ -1,13 +1,12 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sb
-# from wordcloud import wordCloud
-from wordcloud.wordcloud import WordCloud
-import string
+
 from collections import Counter
 from scipy.sparse import csr_matrix
 
+from nltk.stem import PorterStemmer
+
+word_stemmer = PorterStemmer()
 # twitter_df = pd.read_csv('./data.csv')
 #
 # tweets = twitter_df['clean_text']
@@ -18,32 +17,63 @@ from scipy.sparse import csr_matrix
 
 # tweets = twitter_df['clean_text'].tolist()
 
-tweetsInStr = np.array(["Doubt thou the, stars are fire",
-                        "Doubt Truth to be a liar",
-                        "But never doubt I love.",
-                        "I love watching this movie",
-                        "I know it's her car."])
+tweets = np.array(["Doubt thou the, stars are fire",
+                   "Doubt Truth to be a liar",
+                   "But never doubt I love.",
+                   "I love watching this movie",
+                   "I know it's her car."])
 
 stop_words = {'i', 'me', 'to', 'my', 'myself', 'we', 'our', 'ours', 'your', 'you', 'yourself', 'ourselves',
               'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'herself',
               'it', 'its', 'hers', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what',
               'which', 'who', 'whom', 'this', 'a', 'be', 'the', 'are'}
 
+
 # special_characters = set('!"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~')
-unique = set()
+
+def data_preprocessing(list_of_lines):
+    unique_words = set()
+    for index, line in enumerate(list_of_lines):
+        line = line.lower()
+        # remove special characters and digits
+        line = "".join(ch for ch in line if ch.isalpha() or ch == ' ')
+
+        # remove stops words
+        line = " ".join(word for word in line.split() if word not in list(stop_words))
+
+        # apply stemming
+        line = " ".join(word_stemmer.stem(word) for word in line.split())
+
+        list_of_lines[index] = line
+
+        # adding unique words from all lines
+        [unique_words.add(word) for word in line.split() if not {word}.issubset(stop_words)]
+
+    return list_of_lines, sorted(list(unique_words))
 
 
-def remove_punctuation_specChar_digit():
-    for index, tweet in enumerate(tweetsInStr):
+def remove_punctuation_specChar_digit(data):
+    for index, tweet in enumerate(data):
         tweet = tweet.lower()
         tweet = "".join(ch for ch in tweet if ch.isalpha() or ch == ' ')
-        tweetsInStr[index] = tweet
-        # [unique.add(word) for word in tweet.split() if not {word}.issubset(stop_words)]
-        # print(stop_words.intersection(set(tweet.split())))
-    print(tweetsInStr)
+        data[index] = tweet
+
+    return data
 
 
-print(unique)
+def remove_stop_words(data):
+    for index, line in enumerate(data):
+        data[index] = " ".join(word for word in line.split() if word not in list(stop_words))
+
+    return data
+
+
+def apply_stemming(data):
+    for index, line in enumerate(data):
+        line = " ".join(word_stemmer.stem(word) for word in line.split())
+        data[index] = line
+
+    return data
 
 
 def find_unique_words(data):
@@ -56,17 +86,21 @@ def find_unique_words(data):
     return sorted(list(unique_words))
 
 
-print(find_unique_words(tweetsInStr))
+print('\n\n Before=>', tweets)
 
-from nltk.stem import PorterStemmer
+# tweets = remove_punctuation_specChar_digit(tweets)
+# tweets = remove_stop_words(tweets)
+# tweets = apply_stemming(tweets)
+# all_unique_words = find_unique_words(tweets)
 
-# words = tweetsInStr.lower().split()
+tweets, all_unique_words = data_preprocessing(tweets)
 
-# print(words)
-# for word in words:
-#     if word in stopWords:
-#         words.remove(word)
-# Tokenization /vectorization
+print(all_unique_words)
+print('\n\n After=>', tweets)
+
+print(word_stemmer.stem('movies'))
+
+
 
 def UniqueWords(data):
     unique = set()
