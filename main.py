@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 import numpy as np
 
@@ -7,7 +9,7 @@ from scipy.sparse import csr_matrix
 from nltk.stem import PorterStemmer
 
 word_stemmer = PorterStemmer()
-
+# print(word_stemmer.stem('feed'))
 # from nltk.corpus import stopwords
 # import nltk
 # nltk.download('stopwords')
@@ -116,6 +118,33 @@ vowels = np.array(['a', 'e', 'i', 'o', 'u'])
 
 # word = 'sing'
 
+def is_consonant(word, i):
+    if word[i] in vowels:
+        return False
+    if word[i] == 'y':
+        if i != 0:
+            return not (word[i - 1] not in vowels)
+        else:
+            return True
+    return True
+
+
+# print('fryy', is_consonant('fryy', 3))
+
+def vc_measure(word):
+    sequence = ''
+    for i in range(len(word)):
+        if is_consonant(word.lower(), i):
+            sequence += 'c'
+        else:
+            sequence += 'v'
+    # print(sequence)
+    return sequence.count('vc')
+
+
+# ar = ['TR', 'EE', 'TREE', 'Y', 'BY', 'TROUBLE', 'OATS', 'TREES', 'IVY', 'TROUBLES', 'PRIVATE', 'OATEN', 'ORRERY']
+# for word in ar:
+#     print(word, '->', vc_measure(word))
 
 def step1a(word):
     new_word = ''
@@ -133,29 +162,67 @@ def step1a(word):
 
 def step1b(word):
     new_word = word
+    # (m>0) EED	-> EE
     if 'eed' in word[-3:]:
-        pass
-    elif 'ed' in word[-2:]:
+        m = vc_measure(word[0:3])
+        if m > 0:
+            new_word = word[0:-1]
+        return new_word
+
+    flag = False
+    # (*v*) ED ->
+    if 'ed' in word[-2:]:
         res = set(True for v in vowels if v in word[0:-2])
         if True in res:
             new_word = word[0:-2]
+            flag = True
+    #  (*v*) ING ->
     elif 'ing' in word[-3:]:
         res = set(True for v in vowels if v in word[0:-3])
         if True in res:
             new_word = word[0:-3]
+            flag = True
+
+    if flag:
+        new_word = step1b_b(new_word)
 
     return new_word
+
+
+def end_with_double_consonant(word):
+    return len(word) >= 2 and word[-1] == word[-2] and word[-1] != 'y'
+
+
+def end_with_cvc_starO(word):
+    sequence = ''
+    for i in range(len(word[-3:])):
+        if is_consonant(word, i):
+            sequence += 'c'
+        else:
+            sequence += 'v'
+
+    if (len(sequence) >= 3 and (sequence[-3:] == 'cvc') and
+            not (word[-1] == 'w' or word[-1] == 'x' or word[-1] == 'y')):
+        return True
+    else:
+        return False
 
 
 def step1b_b(word):
     new_word = word
+    # AT or BL or IZ -> *e
     if 'at' in word[-2:] or 'bl' in word[-2:] or 'iz' in word[-2:]:
         new_word += 'e'
-    elif ((word[-2:-1] not in vowels and word[-1:] not in vowels) and
+    # (*d and not (*L or *S or *Z)) -> single letter
+    elif (end_with_double_consonant(word) and
           not (word[-1:] == 'l' or word[-1:] == 's') or word[-1:] == 'z'):
         new_word = word[0:-1]
-
+    else:
+        m = vc_measure(word)
+        if m == 1 and end_with_cvc_starO(word):
+            new_word = word + 'e'
     return new_word
+
 
 def step1c(word):
     new_word = word
@@ -166,18 +233,136 @@ def step1c(word):
     return new_word
 
 
-print(step1b_b('hopp'))
-print(step1b_b('tann'))
-print(step1b_b('fall'))
-print(step1b_b('hiss'))
-print(step1b_b('fizz'))
+def step2_3_4_general_condition_replace(step, word, suffix, replace_with):
+    if step > 1:
+        m_range = 0
+        if step == 4:
+            m_range = 1
+        prefix_len = abs(len(word) - len(suffix))
+        word_without_suffix = word[:prefix_len]
+        m = vc_measure(word_without_suffix)
+        # print(word, word_without_suffix, suffix, m, m > 0 and word.endswith(suffix))
+        if step == 4 and suffix == 'ion':
+            if len(word) > 1:
+                if ((m > m_range and (word[-1] == 's' or word[-1] == 't'))
+                        and (word.endswith(suffix))):
+                    return word.replace(suffix, replace_with)
+        else:
+            if m > m_range and word.endswith(suffix):
+                return word.replace(suffix, replace_with)
 
-print(step1c('happy'))
-print(step1c('sky'))
+    return word
+
+
+def step2(word):
+    new_word = word
+    # if is_step2_general_condition(word, 'ational', 'ate'):
+    #     new_word = word.replace('ational', 'ate')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'ational', 'ate')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'tional', 'tion')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'enci', 'ence')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'anci', 'ance')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'izer', 'ize')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'abli', 'able')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'alli', 'al')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'entli', 'ent')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'eli', 'e')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'ousli', 'ous')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'ization', 'ize')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'ation', 'ate')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'ator', 'ate')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'alism', 'al')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'iveness', 'ive')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'fulness', 'ful')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'ousness', 'ous')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'aliti', 'al')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'iviti', 'ive')
+    new_word = step2_3_4_general_condition_replace(2, new_word, 'biliti', 'ble')
+
+    return new_word
+
+
+print(step2('relational'))
+print()
+
+
+# def step3_general_condition_replace(word, suffix, replace_with):
+#     prefix_len = abs(len(word) - len(suffix))
+#     word_without_suffix = word[:prefix_len]
+#     m = vc_measure(word_without_suffix)
+#     # print(word, word_without_suffix, suffix, m, m > 0 and word.endswith(suffix))
+#     if m > 0 and word.endswith(suffix):
+#         return word.replace(suffix, replace_with)
+#     return word
+
+
+def step3(word):
+    new_word = word
+    new_word = step2_3_4_general_condition_replace(3, new_word, 'biliti', 'ble')
+    new_word = step2_3_4_general_condition_replace(3, new_word, 'icate', 'ic')
+    new_word = step2_3_4_general_condition_replace(3, new_word, 'atvie', '')
+    new_word = step2_3_4_general_condition_replace(3, new_word, 'alize', 'al')
+    new_word = step2_3_4_general_condition_replace(3, new_word, 'iciti', 'ic')
+    new_word = step2_3_4_general_condition_replace(3, new_word, 'ical', 'ic')
+    new_word = step2_3_4_general_condition_replace(3, new_word, 'ful', '')
+
+    return new_word
+
+
+def step4(word):
+    new_word = word
+    new_word = step2_3_4_general_condition_replace(4, new_word, "al", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ance", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ence", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "er", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ic", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "able", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ible", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ant", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ement", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ment", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ent", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ion", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ou", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ism", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ate", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "iti", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ous", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ive", "")
+    new_word = step2_3_4_general_condition_replace(4, new_word, "ize", "")
+
+    return new_word
+
+
+print(vc_measure('probat'))
+print(step3('triplicate'))
+print(step3('formative'))
+print(step3('formalize'))
+print(step3('electriciti'))
+print(step3('electrical'))
+print(step3('hopeful'))
+print(step3('goodness'))
+
+
+# print(vc_measure('feed'))
+
+# print(step1b('filing'))
+# print(step1b('conflated'))
+# print(step1b('tanned'))
+# print(step1b('falling'))
+# print(step1b_b('hopxp'))
+
+
+# print(step1b_b('tann'))
+# print(step1b_b('fall'))
+# print(step1b_b('hiss'))
+# print(step1b_b('fizz'))
+#
+# print(step1c('happy'))
+# print(step1c('sky'))
+
 
 # print(step1b('motoring'))
-
-
 
 
 def my_stemmer(data):
