@@ -234,36 +234,67 @@ def get_case(case):
         return 0
 
 
-def probability(word_c, n, vocab, laplace_lambda=1):
-    return (word_c + laplace_lambda) / (n + (len(vocab) * laplace_lambda))
+#  let n be the number of words in the _class case
+#  word_k the number of times word k occur
+def probability(word_k, n, vocab, laplace_lambda=1):
+    return (word_k + laplace_lambda) / (n + (len(vocab) * laplace_lambda))
 
 
 def get_word_count_in_class(data, word, indices):
     count = 0
     for _index in indices:
         line = data[_index]
-        count += sum(line)
+        count += sum([1 for wrd in line.split() if wrd == word])
     return count
+
 
 def probability_a_given_b(sample, _class, data):
     global indices_N_counter_dict
     global all_unique_words
-    for word in sample:
+    # print(sample)
+    mle_probability = 1.0
+    for word in sample.split():
         count = get_word_count_in_class(data, word, indices_N_counter_dict[_class]['indices'])
-        print(count)
+        prob = probability(count, indices_N_counter_dict[_class]['words_count'], all_unique_words)
+        mle_probability *= prob
+        # print(word, '=', count, 'Probability', pro)
+    return mle_probability
 
 
-results = {}
+def posterior_probability(_class, data):
+    global indices_N_counter_dict
+    return indices_N_counter_dict[_class]['words_count'] / len(data)
+
+
+def get_each_class_probability(sample, data):
+    results = {}
+    for _class in classes:
+        mle_probability = probability_a_given_b(sample, _class, data)
+        posterior = posterior_probability(_class, data)
+        results[_class] = mle_probability * posterior
+
+    return results
+
+
+def get_prediction(results):
+    print(results)
+    # log_list = [math.log(x) for x in list(results.values()) if x > 0]
+    max_value = max(list(results.values()))
+    index = list(results.values()).index(max_value)
+    _class = list(results.keys())[index]
+    print(_class)
+    print(max_value)
 
 
 def apply_naive_bayes(data):
+    training_pred = []
     for sample in data:
-        for _class in classes:
-            results[_class] = probability_a_given_b(sample, _class, data)
+        results = get_each_class_probability(sample, data)
+        prediction = get_prediction(results)
 
 
-data = ['I hated the poor acting']
-results[_class] = probability_a_given_b('I hated the poor acting', 1, transformed_samples)
+re = get_each_class_probability('I hated the poor acting', data)
+prediction = get_prediction(re)
 # for sample in transformed_matrix:
 #     print(sample)
 
