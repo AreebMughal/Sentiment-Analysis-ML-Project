@@ -1,0 +1,6 @@
+clean_text,category
+I loved the movie, 1
+I hated the movie, -1
+a great movie. good movie, 1
+poor acting, -1
+great acting, a good movie, 1

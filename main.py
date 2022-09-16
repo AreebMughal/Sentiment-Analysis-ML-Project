@@ -6,30 +6,19 @@ import numpy as np
 from collections import Counter
 from scipy.sparse import csr_matrix
 
-from nltk.stem import PorterStemmer
-
-word_stemmer = PorterStemmer()
-# print(word_stemmer.stem('feed'))
 # from nltk.corpus import stopwords
 # import nltk
 # nltk.download('stopwords')
 # stopWords = set(stopwords.words('english'))
 # print(stopWords)
 
+from stemmer import my_line_stemmer
+
 tweets = np.array(["Doubt thou the, stars are fire",
                    "Doubt Truth to be a liar",
                    "But never doubt I love.",
-                   "I love watching this movie",
+                   "I love love watching this movie",
                    "I know it's her car."])
-# twitter_df = pd.read_csv('./data.csv')
-# tweets = twitter_df.head(20)['clean_text'].to_numpy()
-# print(len(tweets))
-#
-# tweets = twitter_df['clean_text']
-# twitter_df['length'] = twitter_df['clean_text'].str.len()
-# positive = twitter_df[twitter_df['category'] == 1]
-# negative = twitter_df[twitter_df['category'] == -1]
-# neutral = twitter_df[twitter_df['category'] == 0]
 
 # tweets = twitter_df['clean_text'].tolist()
 
@@ -62,16 +51,21 @@ def data_preprocessing(list_of_lines):
     unique_words = set()
     for index, line in enumerate(list_of_lines):
         line = line.lower()
+        # print('-> ', line)
         # remove special characters and digits
         line = "".join(ch for ch in line if ch.isalpha() or ch == ' ')
+        # print('\nSpecial Char:\n', line)
 
         # remove stops words
         line = " ".join(word for word in line.split() if word not in list(stop_words))
-
+        # print('\nRemove Stop:\n', line)
         # apply stemming
         # line = " ".join(word_stemmer.stem(word) for word in line.split())
+        line = my_line_stemmer(line)
+        # print('\nStemming:\n', line)
 
         list_of_lines[index] = line
+        # print('\nEnd:\n', line)
 
         # adding unique words from all lines
         [unique_words.add(word) for word in line.split() if not {word}.issubset(stop_words)]
@@ -95,331 +89,25 @@ def remove_stop_words(data):
     return data
 
 
-def apply_builtin_stemming(data):
-    for index, line in enumerate(data):
-        line = " ".join(word_stemmer.stem(word) for word in line.split())
-        data[index] = line
-
-    return data
-
-
 def find_unique_words(data):
     unique_words = set()
     for line in data:
         for word in line.split():
-            if not {word.lower()}.issubset(stop_words):
-                unique_words.add(word)
+            # if not {word.lower()}.issubset(stop_words):
+            unique_words.add(word)
 
     return sorted(list(unique_words))
 
 
-vowels = np.array(['a', 'e', 'i', 'o', 'u'])
-
-
-# word = 'sing'
-
-def is_consonant(word, i):
-    if word[i] in vowels:
-        return False
-    if word[i] == 'y':
-        if i != 0:
-            return not (word[i - 1] not in vowels)
-        else:
-            return True
-    return True
-
-
-# print('fryy', is_consonant('fryy', 3))
-
-def vc_measure(word):
-    sequence = ''
-    for i in range(len(word)):
-        if is_consonant(word.lower(), i):
-            sequence += 'c'
-        else:
-            sequence += 'v'
-    # print(sequence)
-    return sequence.count('vc')
-
-
-# ar = ['TR', 'EE', 'TREE', 'Y', 'BY', 'TROUBLE', 'OATS', 'TREES', 'IVY', 'TROUBLES', 'PRIVATE', 'OATEN', 'ORRERY']
-# for word in ar:
-#     print(word, '->', vc_measure(word))
-
-def step1a(word):
-    new_word = ''
-    if 'sses' in word[-4:]:
-        new_word = word[0:-2]
-    elif 'ies' in word[-3:]:
-        new_word = word[0:-2]
-    elif 'ss' in word[-2:]:
-        new_word = word
-    elif 's' in word[-1:]:
-        new_word = word[0:-1]
-
-    return new_word
-
-
-def step1b(word):
-    new_word = word
-    # (m>0) EED	-> EE
-    if 'eed' in word[-3:]:
-        m = vc_measure(word[0:3])
-        if m > 0:
-            new_word = word[0:-1]
-        return new_word
-
-    flag = False
-    # (*v*) ED ->
-    if 'ed' in word[-2:]:
-        res = set(True for v in vowels if v in word[0:-2])
-        if True in res:
-            new_word = word[0:-2]
-            flag = True
-    #  (*v*) ING ->
-    elif 'ing' in word[-3:]:
-        res = set(True for v in vowels if v in word[0:-3])
-        if True in res:
-            new_word = word[0:-3]
-            flag = True
-
-    if flag:
-        new_word = step1b_b(new_word)
-
-    return new_word
-
-
-def end_with_double_consonant(word):
-    return len(word) >= 2 and word[-1] == word[-2] and word[-1] != 'y'
-
-
-def end_with_cvc_starO(word):
-    sequence = ''
-    for i in range(len(word[-3:])):
-        if is_consonant(word, i):
-            sequence += 'c'
-        else:
-            sequence += 'v'
-
-    if (len(sequence) >= 3 and (sequence[-3:] == 'cvc') and
-            not (word[-1] == 'w' or word[-1] == 'x' or word[-1] == 'y')):
-        return True
-    else:
-        return False
-
-
-def step1b_b(word):
-    new_word = word
-    # AT or BL or IZ -> *e
-    if 'at' in word[-2:] or 'bl' in word[-2:] or 'iz' in word[-2:]:
-        new_word += 'e'
-    # (*d and not (*L or *S or *Z)) -> single letter
-    elif (end_with_double_consonant(word) and
-          not (word[-1:] == 'l' or word[-1:] == 's') or word[-1:] == 'z'):
-        new_word = word[0:-1]
-    else:
-        m = vc_measure(word)
-        if m == 1 and end_with_cvc_starO(word):
-            new_word = word + 'e'
-    return new_word
-
-
-def step1c(word):
-    new_word = word
-    is_contain_vowel = set(True for v in vowels if v in word[0:-1])
-    if is_contain_vowel and word[-1:] == 'y':
-        new_word = word[0:-1] + 'i'
-
-    return new_word
-
-
-def step2_3_4_general_condition_replace(step, word, suffix, replace_with):
-    if step > 1:
-        m_range = 0
-        if step == 4:
-            m_range = 1
-        prefix_len = abs(len(word) - len(suffix))
-        word_without_suffix = word[:prefix_len]
-        m = vc_measure(word_without_suffix)
-        # print(word, word_without_suffix, suffix, m, m > 0 and word.endswith(suffix))
-        if step == 4 and suffix == 'ion':
-            if len(word) > 1:
-                if ((m > m_range and (word[-1] == 's' or word[-1] == 't'))
-                        and (word.endswith(suffix))):
-                    return word.replace(suffix, replace_with)
-        else:
-            if m > m_range and word.endswith(suffix):
-                return word.replace(suffix, replace_with)
-
-    return word
-
-
-def step2(word):
-    new_word = word
-    # if is_step2_general_condition(word, 'ational', 'ate'):
-    #     new_word = word.replace('ational', 'ate')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'ational', 'ate')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'tional', 'tion')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'enci', 'ence')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'anci', 'ance')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'izer', 'ize')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'abli', 'able')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'alli', 'al')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'entli', 'ent')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'eli', 'e')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'ousli', 'ous')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'ization', 'ize')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'ation', 'ate')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'ator', 'ate')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'alism', 'al')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'iveness', 'ive')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'fulness', 'ful')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'ousness', 'ous')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'aliti', 'al')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'iviti', 'ive')
-    new_word = step2_3_4_general_condition_replace(2, new_word, 'biliti', 'ble')
-
-    return new_word
-
-
-print(step2('relational'))
-print()
-
-
-# def step3_general_condition_replace(word, suffix, replace_with):
-#     prefix_len = abs(len(word) - len(suffix))
-#     word_without_suffix = word[:prefix_len]
-#     m = vc_measure(word_without_suffix)
-#     # print(word, word_without_suffix, suffix, m, m > 0 and word.endswith(suffix))
-#     if m > 0 and word.endswith(suffix):
-#         return word.replace(suffix, replace_with)
-#     return word
-
-
-def step3(word):
-    new_word = word
-    new_word = step2_3_4_general_condition_replace(3, new_word, 'biliti', 'ble')
-    new_word = step2_3_4_general_condition_replace(3, new_word, 'icate', 'ic')
-    new_word = step2_3_4_general_condition_replace(3, new_word, 'atvie', '')
-    new_word = step2_3_4_general_condition_replace(3, new_word, 'alize', 'al')
-    new_word = step2_3_4_general_condition_replace(3, new_word, 'iciti', 'ic')
-    new_word = step2_3_4_general_condition_replace(3, new_word, 'ical', 'ic')
-    new_word = step2_3_4_general_condition_replace(3, new_word, 'ful', '')
-
-    return new_word
-
-
-def step4(word):
-    new_word = word
-    new_word = step2_3_4_general_condition_replace(4, new_word, "al", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ance", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ence", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "er", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ic", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "able", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ible", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ant", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ement", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ment", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ent", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ion", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ou", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ism", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ate", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "iti", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ous", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ive", "")
-    new_word = step2_3_4_general_condition_replace(4, new_word, "ize", "")
-
-    return new_word
-
-
-print(vc_measure('probat'))
-print(step3('triplicate'))
-print(step3('formative'))
-print(step3('formalize'))
-print(step3('electriciti'))
-print(step3('electrical'))
-print(step3('hopeful'))
-print(step3('goodness'))
-
-
-# print(vc_measure('feed'))
-
-# print(step1b('filing'))
-# print(step1b('conflated'))
-# print(step1b('tanned'))
-# print(step1b('falling'))
-# print(step1b_b('hopxp'))
-
-
-# print(step1b_b('tann'))
-# print(step1b_b('fall'))
-# print(step1b_b('hiss'))
-# print(step1b_b('fizz'))
-#
-# print(step1c('happy'))
-# print(step1c('sky'))
-
-
-# print(step1b('motoring'))
-
-
-def my_stemmer(data):
-    for index, line in enumerate(data):
-        new_line = ''
-        for word in line.split():
-            word = step1a(word)
-            word = step1b(word)
-            word = step1b_b(word)
-            word = step1c(word)
-
-
-#
-# word = 'caresses'
-# print(word[0:-2])
-# word = 'ponies'
-# print(word[-3:], word[0:-2])
-# word = 'caress'
-# print(word[-2:], word)
-# word = 'cats'
-# print(word[-1:], word[0:-1])
-#
-
-# print('\n\n Before=>', tweets)
-
-# tweets = remove_punctuation_specChar_digit(tweets)
-# tweets = remove_stop_words(tweets)
-# tweets = apply_builtin_stemming(tweets)
-# all_unique_words = find_unique_words(tweets)
-
-# tweets, all_unique_words = data_preprocessing(tweets)
-
-# print(all_unique_words)
-# print('\n\n After=>', tweets)
-
-# print(word_stemmer.stem('movies'))
-
-
-def UniqueWords(data):
-    unique = set()
-    for words in data:
-        for word in words.lower().split(' '):
-            if len(word) > 2:
-                unique.add(word)
-    vocabOfUniqueWords = {}
-    uniqueList = list(unique)
-    sortList = sorted(uniqueList)
-    for index, word in enumerate(sortList):
-        vocabOfUniqueWords[word] = index
-    return vocabOfUniqueWords
-
-
-# print(UniqueWords(tweetsInStr))
-
-
-def transformation(words):
-    vocab = UniqueWords(words)
+def unique_words_count_dict(unique_word):
+    unique_word_dict = {}
+    for word in unique_word:
+        unique_word_dict[word] = 0
+    return unique_word_dict
+
+
+def transformation(words, unique_words):
+    vocab = unique_words_count_dict(unique_words)
 
     row, col, val = [], [], []
     for idx, word in enumerate(words):
@@ -435,5 +123,165 @@ def transformation(words):
                     val.append(count)
     return csr_matrix((val, (row, col)), shape=(len(words), len(vocab)))
 
-# print(transformation(twitter_df['clean_text']).toarray())
-# print(transformation(tweetsInStr))
+
+def my_transformation(tweets, unique_word):
+    transformed_array = []
+    u_words_dict = unique_words_count_dict(unique_word)
+
+    for line in tweets:
+        for u_word in unique_word:
+            count = 0
+            if u_word in line.split():
+                # print(u_word)
+                count = sum([1 for word in line.split() if word == u_word])
+                # count =[1 for word in line.split() if word == u_word]
+                # print(count)
+            u_words_dict[u_word] = count
+
+        transformed_array.append(list(u_words_dict.values()))
+
+    return transformed_array
+
+
+# print('\n\n Before=>', tweets)
+
+# tweets = remove_punctuation_specChar_digit(tweets)
+# tweets = remove_stop_words(tweets)
+# tweets = apply_builtin_stemming(tweets)
+# all_unique_words = find_unique_words(tweets)
+twitter_df = pd.read_csv('./data.csv')
+
+# twitter_df = twitter_df.sample(frac=1)
+no_of_samples = 20
+twitter_df = twitter_df[:no_of_samples]
+
+positive_tweets = twitter_df[twitter_df['category'] == 1]
+negative_tweets = twitter_df[twitter_df['category'] == -1]
+neutral_tweets = twitter_df[twitter_df['category'] == 0]
+
+percent = math.floor(.7 * no_of_samples)
+print(percent)
+training_data = twitter_df[:percent]
+testing_data = twitter_df[percent:]
+print('positive', len(positive_tweets))
+print('negative', len(negative_tweets))
+print('neutral', len(neutral_tweets))
+print('training', len(training_data))
+print('testing', len(testing_data))
+print('training p', len(training_data[training_data['category'] == 1]))
+print('training n', len(training_data[training_data['category'] == -1]))
+print('training nt', len(training_data[training_data['category'] == 0]))
+print('testing p', len(testing_data[testing_data['category'] == 1]))
+print('testing n', len(testing_data[testing_data['category'] == -1]))
+print('testing nt', len(testing_data[testing_data['category'] == 0]))
+
+tweets = training_data['clean_text'].to_numpy()
+output_result = training_data['category'].to_numpy()
+
+tweets, all_unique_words = data_preprocessing(tweets)
+# print(all_unique_words)
+transformed_samples = np.array(my_transformation(tweets, all_unique_words))
+
+classes = np.unique(output_result)
+print(classes)
+# def count_words(sample, counter):
+# for word in sample.split():
+indices_N_counter_dict = {}
+for _class in classes:
+    indices_N_counter_dict[_class] = {'indices': [], 'words_count': 0}
+# positive_data_dict = {'indices': [], 'words_count': 0}
+# negative_data_dict = {'indices': [], 'words_count': 0}
+# neutral_data_dict = {'indices': [], 'words_count': 0}
+
+data = ['I loved the movie',
+        'I hated the movie',
+        'a great movie good movie',
+        'poor acting',
+        'great acting a good movie']
+output_result = [1, -1, 1, -1, 1]
+all_unique_words = find_unique_words(data)
+print(all_unique_words)
+
+transformed_samples = np.array(my_transformation(data, all_unique_words))
+print(transformed_samples)
+
+
+def append_index_N_count(data_dict, transformed_data, i):
+    data_dict['indices'].append(i)
+    data_dict['words_count'] += sum(transformed_data[i])
+
+
+for index, value in enumerate(output_result):
+    if value == 1 and value in classes:
+        append_index_N_count(indices_N_counter_dict[value], transformed_samples, index)
+    elif value == -1:
+        append_index_N_count(indices_N_counter_dict[value], transformed_samples, index)
+    elif value == 0:
+        append_index_N_count(indices_N_counter_dict[value], transformed_samples, index)
+# print(positive_data_dict)
+# print(negative_data_dict)
+# print(neutral_data_dict)
+
+print(indices_N_counter_dict)
+
+
+def get_case(case):
+    if case == '+':
+        return 1
+    elif case == '-':
+        return -1
+    elif case == 'o':
+        return 0
+
+
+def probability(word_c, n, vocab, laplace_lambda=1):
+    return (word_c + laplace_lambda) / (n + (len(vocab) * laplace_lambda))
+
+
+def get_word_count_in_class(data, word, indices):
+    count = 0
+    for _index in indices:
+        line = data[_index]
+        count += sum(line)
+    return count
+
+def probability_a_given_b(sample, _class, data):
+    global indices_N_counter_dict
+    global all_unique_words
+    for word in sample:
+        count = get_word_count_in_class(data, word, indices_N_counter_dict[_class]['indices'])
+        print(count)
+
+
+results = {}
+
+
+def apply_naive_bayes(data):
+    for sample in data:
+        for _class in classes:
+            results[_class] = probability_a_given_b(sample, _class, data)
+
+
+data = ['I hated the poor acting']
+results[_class] = probability_a_given_b('I hated the poor acting', 1, transformed_samples)
+# for sample in transformed_matrix:
+#     print(sample)
+
+
+'''
+['car', 'doubt', 'fire', 'know', 'liar', 'love', 'movie', 'never', 'star', 'thou', 'truth', 'watche']
+[[0 1 1 0 0 0 0 0 1 1 0 0]
+ [0 1 0 0 1 0 0 0 0 0 1 0]
+ [0 1 0 0 0 1 0 1 0 0 0 0]
+ [0 0 0 0 0 1 1 0 0 0 0 1]
+ [1 0 0 1 0 0 0 0 0 0 0 0]]
+
+
+['car', 'doubt', 'fire', 'know', 'liar', 'love', 'movie', 'never', 'star', 'thou', 'truth', 'watche']
+[0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0]
+[0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0]
+[0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]
+[0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 1]
+[1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+
+'''
