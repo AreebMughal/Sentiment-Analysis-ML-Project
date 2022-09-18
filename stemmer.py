@@ -1,5 +1,5 @@
-from nltk.stem import PorterStemmer
 import numpy as np
+from nltk.stem import PorterStemmer
 
 word_stemmer = PorterStemmer()
 
@@ -13,8 +13,6 @@ def apply_builtin_stemming(data):
 
     return data
 
-
-# word = 'sing'
 
 def is_consonant(word, i):
     if word[i] in vowels:
@@ -46,8 +44,6 @@ def end_with_cvc_starO(word):
         return False
 
 
-# print('fryy', is_consonant('fryy', 3))
-
 def vc_measure(word):
     sequence = ''
     for i in range(len(word)):
@@ -58,10 +54,6 @@ def vc_measure(word):
     # print(sequence)
     return sequence.count('vc')
 
-
-# ar = ['TR', 'EE', 'TREE', 'Y', 'BY', 'TROUBLE', 'OATS', 'TREES', 'IVY', 'TROUBLES', 'PRIVATE', 'OATEN', 'ORRERY']
-# for word in ar:
-#     print(word, '->', vc_measure(word))
 
 def step1a(word):
     new_word = word
@@ -179,6 +171,7 @@ def step2(word):
 
     return new_word
 
+
 # def step3_general_condition_replace(word, suffix, replace_with):
 #     prefix_len = abs(len(word) - len(suffix))
 #     word_without_suffix = word[:prefix_len]
@@ -280,7 +273,10 @@ def my_line_stemmer(line):
 
     return new_line
 
-#
+# ar = ['TR', 'EE', 'TREE', 'Y', 'BY', 'TROUBLE', 'OATS', 'TREES', 'IVY', 'TROUBLES', 'PRIVATE', 'OATEN', 'ORRERY']
+# for word in ar:
+#     print(word, '->', vc_measure(word))
+
 # print('\n Step - 2')
 # print(step2('relational'))
 # print(step2('conditional'))
