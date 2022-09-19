@@ -1,5 +1,6 @@
 from nltk.stem import PorterStemmer
-
+import pandas as pd
+import numpy as np
 word_stemmer = PorterStemmer()
 from collections import Counter
 from scipy.sparse import csr_matrix
@@ -97,7 +98,7 @@ def unique_words_count_dict(unique_word):
 def my_transformation(tweets, unique_word):
     transformed_array = []
     u_words_dict = unique_words_count_dict(unique_word)
-
+    df = pd.DataFrame(columns=range(len(u_words_dict)))
     for line in tweets:
         for u_word in unique_word:
             count = 0
@@ -108,6 +109,7 @@ def my_transformation(tweets, unique_word):
                 # print(count)
             u_words_dict[u_word] = count
         transformed_array.append(list(u_words_dict.values()))
+        df.loc[len(df.index)] = list(u_words_dict.values())
 
-    return transformed_array
+    return np.array(transformed_array), df
 
