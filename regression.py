@@ -42,105 +42,135 @@ def cost(x, hyp, y):
     return (-1.0 / len(x)) * (y_log + one_minus_y_log)
 
 
-def Logistic_Regression(n, thetas):
-    global classes
-    # errors_in_n = {}
-    errors_in_n = []
+def regression(classes, thetas, _Y, _X):
 
-    J = 0.0
-    alpha = 0.2
     all_classes_sig_res = {}
     h = []
+    for _class in classes:
+        # sigResult = pd.Series(np.zeros((len(y_tr), )), dtype='float64')
+        sigResult = []
+        # hypMinusY = pd.Series([], dtype='float64')
+        # print('Class', int(_class))
+        df = pd.DataFrame(_Y, dtype='int')
+        last_col_name = df.shape[1] - 1
+        df[last_col_name] = np.where(df[last_col_name] == _class, 1, 0)
+        y = df[last_col_name].to_numpy()
+        for index, X in enumerate(_X):
+            z = hypothesis(X, thetas)
+            # print(index, 'z', sigmoid(z))
+            # sigResult[index] = sigmoid(z)
+            sigResult.append(sigmoid(z))
+        # print(sigResult)
+        h = sigResult
+        all_classes_sig_res[_class] = np.subtract(sigResult, y)
+    # print(all_classes_sig_res)
+    y_prime = []
+    for i in range(len(_Y)):
+        _min_arr = []
+        for label in classes:
+            # print(label)
+            _min_arr.append(all_classes_sig_res[label][i])
+        min_ele = min(_min_arr)
+        index = _min_arr.index(min_ele)
+        pred = classes[index]
+        y_prime.append(pred)
+    return h, y_prime
+
+
+
+def Logistic_Regression(n, _thetas):
+    global classes
+    # errors_in_n = {}
+    training_errors = []
+    validation_errors = []
+    J = 0.0
+    alpha = 0.2
+
     for i in range(n):
-        old_thetas = thetas
-        for _class in classes:
-            # sigResult = pd.Series(np.zeros((len(y_tr), )), dtype='float64')
-            sigResult = []
-            # hypMinusY = pd.Series([], dtype='float64')
-            # print('Class', int(_class))
-            df = pd.DataFrame(y_tr, dtype='int')
-            last_col_name = df.shape[1] - 1
-            df[last_col_name] = np.where(df[last_col_name] == _class, 1, 0)
-            y = df[last_col_name].to_numpy()
-            for index, X in enumerate(X_tr):
-                z = hypothesis(X, thetas)
-                # print(index, 'z', sigmoid(z))
-                # sigResult[index] = sigmoid(z)
-                sigResult.append(sigmoid(z))
-            # print(sigResult)
-            h = sigResult
-            all_classes_sig_res[_class] = np.subtract(sigResult, y)
-
-        # print(all_classes_sig_res)
-        y_prime = []
-        for i in range(len(y_tr)):
-            _min_arr = []
-            for label in classes:
-                # print(label)
-                _min_arr.append(all_classes_sig_res[label][i])
-            min_ele = min(_min_arr)
-            index = _min_arr.index(min_ele)
-            pred = classes[index]
-            y_prime.append(pred)
-
-        # hypMinusY = np.subtract(y_prime, y_tr)
+        old_thetas = _thetas
+        h, y_prime = regression(classes, _thetas, y_tr, X_tr)
+        # hypMinusY = np.subtract(y_prime, y_r)
         hypMinusY = np.subtract(h, y_tr)
-        # print(y_prime)
         J = cost(X_tr, h, y_tr)
-        print('Error ', J)
-        d = derivative(hypMinusY, X_tr)
-        thetas = old_thetas - (alpha * d)
+        print('Train Error ', J)
+
         # print(type(new_thetas), type(thetas))
         # print(new_thetas)
         # print(thetas)
-        # errors_in_n[str(i + 1)] = J
-        errors_in_n.append(J)
-        if old_thetas.equals(thetas):
-            return J, thetas
+        # training_errors[str(i + 1)] = J
+        training_errors.append(J)
 
-    return J, thetas, errors_in_n
+        h, y_prime = regression(classes, _thetas, y_vld, X_vld)
+        # hypMinusY = np.subtract(y_prime, y_r)
+        hypMinusY = np.subtract(h, y_vld)
+        J = cost(X_vld, h, y_vld)
+        print('Valid Error ', J)
+        validation_errors.append(J)
+
+        d = derivative(hypMinusY, X_tr)
+        _thetas = old_thetas - (alpha * d)
+        if old_thetas.equals(_thetas):
+            return J, _thetas
+
+    return J, _thetas, training_errors, validation_errors
 
 
 if __name__ == '__main__':
-    no_of_sample = 20
+    no_of_samples = 100
     tweets = pd.read_csv('./transformed_data_1.csv')
-    # classes = np.unique(y_tr.to_numpy())
     # tweets = pd.read_csv('./example.csv')
     tweets.drop(columns=tweets.columns[0], axis=1, inplace=True)
-    print(tweets.shape[0])
+
     x_zero = np.ones((tweets.shape[0]), dtype='int16')
     tweets.insert(0, '', x_zero)
-    print(tweets)
+    # print(tweets)
+    tweets = tweets[:no_of_samples]
+    percent = math.floor(.7 * no_of_samples)
+    # print(percent)
+    training_data = tweets[:percent]
+    testing_data = tweets[percent:]
+    training_data.dropna(inplace=True)
 
-    train = tweets[:no_of_sample]
-    # test = tweets[no_of_sample:]
-    train.dropna(inplace=True)
+    valid_percent = math.floor(.5 * training_data.shape[0])
+    train = training_data[:valid_percent]
+    validation = training_data[valid_percent:]
 
     last_col_name = str(tweets.shape[1] - 2)
     X_tr = train.drop(last_col_name, axis=1)
     thetas_length = int(X_tr.shape[1])
+
     X_tr = X_tr.to_numpy()
     y_tr = train[last_col_name].to_numpy()
-    # print(len(y_tr))
-    # X_te = test.drop(last_col_name, axis=1).to_numpy(),
-    # y_te = test[last_col_name]
     classes = np.unique(y_tr)
+    X_vld = validation.drop(last_col_name, axis=1).to_numpy()
+    y_vld = validation[last_col_name].to_numpy()
 
     thetas = get_initial_thetas(thetas_length)
     print('OLD Thetas')
     print(thetas)
     n = 20
-    J, thetas, error_dict = Logistic_Regression(n, thetas)
+    J, thetas, train_error_dict, valid_error_dict = Logistic_Regression(n, thetas)
     print('New Thetas')
     print(thetas)
 
-    print(error_dict)
+    print(train_error_dict)
+
+    X_te = testing_data.drop(last_col_name, axis=1).to_numpy()
+    y_te = testing_data[last_col_name].to_numpy()
+
+    h, y_prime = regression(classes, thetas, y_te, X_te)
+    # hypMinusY = np.subtract(y_prime, y_r)
+    hypMinusY = np.subtract(h, y_te)
+    J = cost(X_te, h, y_te)
+    print()
+    print('Test Error:', J)
 
     def plot_accuracy_graph():
         plot.title('No. of Iteration vs Error')
         plot.xlabel('No. of Iterations')
         plot.ylabel('Error')
-        plot.plot([i for i in range(1, n+1)], error_dict)
+        plot.plot([i for i in range(1, n+1)], train_error_dict, color='green')
+        plot.plot([i for i in range(1, n + 1)], valid_error_dict, color='brown')
         plot.show()
 
 

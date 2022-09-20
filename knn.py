@@ -6,6 +6,8 @@ import scipy.stats
 import numpy as np
 import sklearn.metrics as sk
 from matplotlib import pyplot as plot
+import statistics
+
 
 tweets = pd.read_csv('./transformed_data_1.csv')
 # tweets = pd.read_csv('./example.csv')
@@ -40,7 +42,6 @@ k_training_accuracy_dict = {}
 k_validation_accuracy_dict = {}
 k_testing_accuracy_dict = {}
 
-import statistics
 
 
 # this generic method will calculate the distance of one sample with actual data (training data) &
