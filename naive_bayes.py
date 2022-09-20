@@ -5,6 +5,7 @@ import numpy as np
 import math
 import sklearn.metrics as sk
 from main import data_preprocessing, my_transformation, find_unique_words
+from matplotlib import pyplot as plot
 
 
 # ---------------------- Method-1 ----------------------
@@ -150,7 +151,25 @@ def apply_naive_bayes(data, original_data):
 
 if __name__ == '__main__':
 
+    # label = ['10k', '20k']
+    # train = [0.8624285714285714, 0.8458571428571429]
+    # test = [0.615, 0.6643333333333333]
+    #
+    #
+    # def plot_accuracy_graph():
+    #     plot.title('No. of Samples vs Accuracy')
+    #     plot.xlabel('No. of Samples')
+    #     plot.ylabel('Accuracy')
+    #     plot.plot(label, train, color='green')
+    #     plot.plot(label, test, color='red')
+    #     plot.show()
+    #
+    #
+    # plot_accuracy_graph()
+    # exit()
+
     no_of_samples = 10000
+
     # twitter_df = pd.read_csv('./practice.csv')
     twitter_df = pd.read_csv('./Twitter_Data.csv')
     # twitter_df = twitter_df.sample(frac=1)
@@ -159,8 +178,8 @@ if __name__ == '__main__':
     # print(percent)
     training_data = twitter_df[:percent]
     testing_data = twitter_df[percent:]
-    print(len(training_data))
-    print(len(testing_data))
+    # print(len(training_data))
+    # print(len(testing_data))
 
     actual_training_data = training_data['clean_text'].to_numpy()
     actual_testing_data = testing_data['clean_text'].to_numpy()
@@ -171,7 +190,7 @@ if __name__ == '__main__':
     transformed_samples, transformed_df = my_transformation(training_tweets, all_unique_words)
 
     # transformed_df = pd.read_csv(r'transformed_data.csv')
-    print((transformed_df))
+    print(transformed_df)
 
     classes = np.unique(training_data_output)
     # print(classes)
@@ -206,7 +225,6 @@ if __name__ == '__main__':
     print('Training Accuracy:', training_accuracy)
     print('Testing Accuracy:', testing_accuracy)
 
-
     # --> for all data
     # training_tweets, all_unique_words = data_preprocessing(twitter_df['clean_text'].to_numpy())
     # transformed_samples, transformed_df = my_transformation(training_tweets, all_unique_words)
@@ -218,7 +236,6 @@ if __name__ == '__main__':
     #
     # print('Training Accuracy:', training_accuracy)
     # print('Testing Accuracy:', testing_accuracy)
-
 
     # --------------------------------------------------------------------------------------
 

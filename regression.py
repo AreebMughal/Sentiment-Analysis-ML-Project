@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import random
 import math
 from matplotlib import pyplot as plot
+import sklearn.metrics as sk
 
 
 def get_initial_thetas(features_length):
@@ -163,7 +164,10 @@ if __name__ == '__main__':
     hypMinusY = np.subtract(h, y_te)
     J = cost(X_te, h, y_te)
     print()
+    testing_accuracy = sk.accuracy_score(y_te, y_prime)
+
     print('Test Error:', J)
+    print('Testing Accuracy:', testing_accuracy)
 
     def plot_accuracy_graph():
         plot.title('No. of Iteration vs Error')
