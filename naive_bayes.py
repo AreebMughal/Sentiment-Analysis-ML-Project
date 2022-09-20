@@ -150,8 +150,8 @@ def apply_naive_bayes(data, original_data):
 
 if __name__ == '__main__':
 
-    no_of_samples = 5000
-    # twitter_df = pd.read_csv('./data.csv')
+    no_of_samples = 10000
+    # twitter_df = pd.read_csv('./practice.csv')
     twitter_df = pd.read_csv('./Twitter_Data.csv')
     # twitter_df = twitter_df.sample(frac=1)
     twitter_df = twitter_df[:no_of_samples]
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     # print(classes)
 
     # transformed_df = pd.DataFrame(transformed_samples)
-    # transformed_df[transformed_df.shape[1]] = training_data['category']
+    transformed_df[transformed_df.shape[1]] = training_data['category']
     # transformed_df.to_csv('transformed_data.csv')
     # exit()
     last_col_name = (transformed_df.shape[1] - 1)
